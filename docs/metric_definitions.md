@@ -1,6 +1,6 @@
 # Metric Definitions
 
-## Phase 1 implemented metrics
+## Phase 3 implemented metrics
 
 ### Team offense
 - `plays`: count of offensive plays in scope
@@ -20,17 +20,57 @@
 
 ### Player offense
 - starter fields include passing, rushing, and receiving volume from weekly player stats
-- `target_share` and `air_yards_share` remain TODO until a stable source feed is wired in Phase 2
+- `target_share` and `air_yards_share` remain TODO until a stable denominator strategy is added in a later phase
+
+### Team special teams
+- `field_goal_attempts` and `field_goals_made`: kicking attempts and made kicks at the team-game grain
+- `extra_point_attempts` and `extra_points_made`: extra point volume and conversions
+- `punts` and `punt_yards`: punt counts and punt yardage
+- `kick_returns` and `punt_returns`: public return counts at the team-game grain
+- `team_rankings_special_teams_rating`: optional public special teams rating enrichment
+- `dvoa_special_teams`: optional FTN-style special teams efficiency enrichment
+
+Assumptions:
+- team special teams inputs come from nflverse-compatible weekly team stats when core counting columns exist
+- public ratings such as TeamRankings and DVOA are optional enrichments and may be null until wired
+- alias columns like `fg_att` and `xp_att` are treated as equivalent to the warehouse field names
+
+### Player special teams
+- `field_goal_attempts` and `field_goals_made`: player kicking volume when available
+- `extra_point_attempts` and `extra_points_made`: player extra point volume when available
+- `punts` and `punt_yards`: player punting volume when available
+- `kick_returns` and `kick_return_yards`: player kickoff return production
+- `punt_returns` and `punt_return_yards`: player punt return production
+
+Assumptions:
+- missing public special teams columns default to zero instead of failing the transform
+- alias columns like `kickoff_returns` and `kickoff_return_yards` are accepted as nflverse-compatible inputs
+
+### Player defense
+- `tackles`: direct nflverse-compatible tackle total when present
+- `assisted_tackles`: direct assisted tackle total when present
+- `sacks`: direct sack total when present
+- `qb_hits`: direct quarterback hit total when present
+- `pressures`: left null unless a direct source field exists
+- `interceptions`: direct interception total when present
+- `passes_defended`: direct pass-defense total when present
+- `forced_fumbles`: direct forced-fumble total when present
+- `pressure_rate`: only populated when both a pressure numerator and pass-rush denominator are present
+
+Assumptions:
+- player defense only maps fields that exist directly in nflverse-compatible weekly player stats
+- pressure metrics are not inferred from sacks or qb hits
+- rate stats remain null when the denominator is missing or zero
 
 ## Deferred metrics
 
-The following metrics are planned but not fully implemented in Phase 1:
+The following metrics are planned but not fully implemented:
 - CPOE and time to throw from Next Gen Stats
 - separation and route-running metrics from Next Gen Stats or PlayerProfiler
 - snap-share-based usage metrics from PFR and PlayerProfiler
 - pressure rate and advanced pass rush metrics from defensive sources
-- DVOA family fields from FTN or compatible licensed/public distribution
-- public special teams ratings and kicking/punting enhancements from TeamRankings and other sources
+- DVOA family fields from FTN or compatible licensed/public distribution beyond the current optional special teams enrichment
+- richer public special teams ratings and kicking/punting enhancements from TeamRankings and other sources
 
 ## Formula caveats
 

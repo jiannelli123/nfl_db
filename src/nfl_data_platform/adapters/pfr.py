@@ -27,3 +27,6 @@ class ProFootballReferenceAdapter(BaseSourceAdapter):
 
     def fetch_weekly_team_stats(self, seasons: tuple[int, ...]) -> pd.DataFrame:
         raise NotImplementedError("TODO: Add team advanced stat ingestion for PFR.")
+
+    def fetch_draft_picks(self, seasons: tuple[int, ...]) -> pd.DataFrame:
+        raise NotImplementedError("TODO: Draft ingestion via PFR is not implemented.")

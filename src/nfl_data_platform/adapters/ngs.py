@@ -27,3 +27,6 @@ class NextGenStatsAdapter(BaseSourceAdapter):
 
     def fetch_weekly_team_stats(self, seasons: tuple[int, ...]) -> pd.DataFrame:
         raise NotImplementedError("TODO: Confirm whether team-level NGS exports are available.")
+
+    def fetch_draft_picks(self, seasons: tuple[int, ...]) -> pd.DataFrame:
+        raise NotImplementedError("TODO: Next Gen Stats draft ingestion is not implemented.")

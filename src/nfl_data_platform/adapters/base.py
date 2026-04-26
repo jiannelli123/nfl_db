@@ -32,3 +32,7 @@ class BaseSourceAdapter(ABC):
     @abstractmethod
     def fetch_weekly_team_stats(self, seasons: tuple[int, ...]) -> pd.DataFrame:
         """Return normalized weekly team statistics for the requested seasons."""
+
+    @abstractmethod
+    def fetch_draft_picks(self, seasons: tuple[int, ...]) -> pd.DataFrame:
+        """Return normalized draft pick data for the requested seasons."""

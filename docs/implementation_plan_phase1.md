@@ -1,5 +1,10 @@
 # Phase 1 Implementation Plan
 
+Historical note:
+- this document describes the original scaffold plan
+- the repository has since progressed through Phase 2 and Phase 3
+- for the current implementation, use [start_here.md](/C:/Users/jiann/OneDrive/Projects/nfl_db/docs/start_here.md), [architecture.md](/C:/Users/jiann/OneDrive/Projects/nfl_db/docs/architecture.md), and [orchestration.md](/C:/Users/jiann/OneDrive/Projects/nfl_db/docs/orchestration.md)
+
 ## Summary
 
 Build the initial repository scaffold for an NFL warehouse platform with:

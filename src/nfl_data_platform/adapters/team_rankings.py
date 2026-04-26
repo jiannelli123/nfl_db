@@ -27,3 +27,6 @@ class TeamRankingsAdapter(BaseSourceAdapter):
 
     def fetch_weekly_team_stats(self, seasons: tuple[int, ...]) -> pd.DataFrame:
         raise NotImplementedError("TODO: Add public special teams metric ingestion in a later phase.")
+
+    def fetch_draft_picks(self, seasons: tuple[int, ...]) -> pd.DataFrame:
+        raise NotImplementedError("TODO: TeamRankings draft ingestion is not implemented.")

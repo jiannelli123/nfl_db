@@ -23,8 +23,8 @@ That warehouse is meant to contain:
 - team stats
 - player stats
 
-Right now, the code is in **Phase 1**.
-That means the project already has the structure and core logic for a pipeline, but some parts are still scaffolding and placeholders.
+Right now, the code is in **Phase 3** for the nflverse source.
+That means nflverse is a real working source backend with the current warehouse tables populated, while other future sources are still scaffolding and placeholders.
 
 ## The big idea in plain English
 
@@ -34,13 +34,13 @@ Here is the full idea of how the system is supposed to work:
 2. Connect to a data source.
 3. Pull raw NFL data into memory.
 4. Convert raw data into a cleaner and more consistent shape.
-5. Build tables for teams, players, games, and stats.
+5. Build tables for teams, players, games, play-by-play, and stats.
 6. Run simple checks to make sure the output is not obviously broken.
-7. Save the results for validation now, and later load them into a database.
+7. Load the warehouse tables into a database.
+8. Save CSV copies for easy validation and inspection.
 
-Today, step 7 is only partly implemented.
-The pipeline now saves CSV files to a temp folder so the outputs can be inspected.
-It does **not** fully load all tables into the warehouse database yet.
+Today, those steps are implemented for nflverse.
+The pipeline uses `nflreadpy`, stages raw files, loads the current warehouse tables into the configured database, writes extract/transform/load ETL rows into `etl_run_log`, and also saves CSV files to a temp folder so the outputs can be inspected.
 
 ## The important folders
 
@@ -136,10 +136,13 @@ This is the heart of the pipeline.
 It coordinates the main steps:
 
 1. initialize the database connection
-2. extract raw data
-3. build cleaned output tables
-4. run quality checks
-5. write CSV snapshots
+2. execute the SQL table blueprints
+3. extract raw data with `nflreadpy`
+4. stage raw source files
+5. build cleaned output tables
+6. run quality checks
+7. load the warehouse tables into the warehouse
+8. write CSV snapshots
 
 This file does not contain all the detailed transformation logic itself.
 Instead, it calls other modules that each do one specific job.
@@ -196,24 +199,22 @@ Why this matters:
 File:
 [`nflverse.py`](/C:/Users/jiann/OneDrive/Projects/nfl_db/src/nfl_data_platform/adapters/nflverse.py)
 
-This is the main source adapter currently used in Phase 1.
+This is the main source adapter currently used in the current pipeline.
 
 Its job is to:
 
-- call nflverse-compatible Python functions
+- call `nflreadpy`
 - turn the result into a pandas DataFrame
 - normalize column names to lowercase
 
 Important detail:
 
-If the backend library is not available, this adapter currently returns an empty DataFrame instead of crashing.
+If `nflreadpy` is not installed, the adapter raises a clear error instead of silently returning empty data.
 
 Why this matters:
 
-- this is convenient for scaffolding and tests
-- but it also means a run can appear successful while producing empty outputs
-
-So if you see empty CSV files, it usually means the source adapter did not return real data.
+- production-like runs should fail clearly when the backend is missing
+- silent empty extracts are dangerous because they look successful
 
 ### `transforms/dimensions.py`
 
@@ -351,9 +352,9 @@ A **database engine** is an object that knows how to connect to a database.
 
 Important detail:
 
-At the moment, the project creates the engine, but it does not yet fully load pipeline outputs into the database.
+At the moment, the project creates the engine, executes the table DDL, stages raw files, and loads the currently implemented nflverse-backed tables.
 
-So the database part is only partially wired.
+The database part is wired for the current Phase 3 nflverse scope, but not complete for every planned source or advanced enrichment.
 
 ## How one pipeline run works
 
@@ -369,11 +370,11 @@ This tells the pipeline:
 - what season to process
 - where temp outputs should go
 
-### Step 2: the database engine is created
+### Step 2: the database engine is created and DDL is executed
 
-The project checks that `DATABASE_URL` looks valid and creates an engine.
+The project checks that `DATABASE_URL` looks valid, creates an engine, and runs the SQL files under `sql/ddl/`.
 
-Right now this mainly proves that configuration is present.
+This means the warehouse table definitions can now be created during `init-db`.
 
 ### Step 3: raw data is extracted
 
@@ -390,49 +391,68 @@ These are returned as pandas DataFrames.
 A **DataFrame** is like a spreadsheet in memory.
 It has rows and columns.
 
-### Step 4: dimension tables are built
+### Step 4: raw staging files are written
+
+The extracted source datasets are written to bounded files under `data/nflverse/`.
+
+This creates a replayable raw layer for a specific season/week/season type window.
+
+### Step 5: dimension tables are built
 
 The code creates:
 
 - `dim_team`
 - `dim_player`
 - `dim_game`
+- `bridge_player_ids`
 
 These tables describe the core entities in the warehouse.
 
-### Step 5: fact tables are built
+### Step 6: fact tables are built
 
 The code creates:
 
+- `fact_game_pbp`
 - `fact_team_offense`
 - `fact_team_defense`
 - `fact_player_offense`
+- `fact_team_special_teams`
+- `fact_player_defense`
+- `fact_player_special_teams`
 
 These tables hold game and player metrics.
 
-### Step 6: quality checks are run
+### Step 7: quality checks are run
 
 The pipeline checks whether:
 
 - required columns exist
 - keys are unique
-- some fact outputs are non-empty
+- key identifiers are non-null
+- rows match the requested season/week window
+- simple aggregates reconcile across related outputs
 
 The results are stored in a list of structured check results.
 
-### Step 7: CSV snapshots are written
+### Step 8: the warehouse tables are loaded
+
+The pipeline writes the current set of implemented nflverse-backed tables into the configured database.
+
+It also adds one ETL log row per load step to `etl_run_log`.
+
+### Step 9: CSV snapshots are written
 
 The code writes the run output into a folder under `data/temp/`.
 
 This gives you files you can open in Excel, a text editor, pandas, or another tool.
 
-### Step 8: the pipeline returns status information
+### Step 10: the pipeline returns status information
 
 The CLI prints:
 
 - how many quality results were produced
 - where the CSV output directory is
-- a message saying warehouse loading is still TODO
+- a message summarizing how many rows were loaded
 
 ## Why CSV snapshots were added
 
@@ -471,7 +491,7 @@ They matter because they define:
 - keys
 - uniqueness rules
 
-Right now, these SQL blueprints exist even though the pipeline is not yet loading all outputs into the warehouse.
+Right now, the implemented nflverse-backed outputs are loaded into the warehouse, while the remaining planned tables and future source integrations still need to be added.
 
 ## What is implemented vs what is still missing
 
@@ -481,23 +501,19 @@ Right now, these SQL blueprints exist even though the pipeline is not yet loadin
 - CLI commands
 - settings loading
 - database engine creation
-- nflverse adapter scaffolding
+- nflverse adapter using `nflreadpy`
+- raw file staging
 - dimension builders
-- starter fact builders
-- lightweight quality checks
+- bridge player ID builder
+- warehouse fact builders
+- database loading for the current warehouse tables
+- ETL step logging
+- expanded quality checks
 - CSV output snapshots
 - automated tests
 
 ### Not fully implemented yet
 
-- real DDL execution inside `init-db`
-- full database loads
-- ETL run logging into `etl_run_log`
-- full population of `fact_game_pbp`
-- special teams fact generation
-- player defense fact generation
-- richer validation rules
-- stronger handling for empty-source runs
 - additional external source integrations
 
 ## Why the code is organized this way
@@ -527,7 +543,8 @@ If you are new to programming or data engineering, the most useful mental model 
 2. **Adapter** gets raw data.
 3. **Transform** turns raw data into useful tables.
 4. **Quality checks** ask, "Does this output look sane?"
-5. **Persistence** saves the result somewhere.
+5. **Loader** writes the current warehouse tables to the database.
+6. **Persistence** saves CSV copies for inspection.
 
 If you keep that model in mind, most of the project will make sense.
 
@@ -568,16 +585,15 @@ That summary is much easier to analyze than manually inspecting every play.
 
 One of the most important current limitations is this:
 
-If the nflverse backend is not available, the adapter returns empty DataFrames.
+If the nflverse backend is not available, the adapter raises a clear error.
 
 That means:
 
-- the pipeline can still complete
-- CSV files can still be written
-- but the outputs may be empty
+- the pipeline should stop early
+- the missing dependency is visible immediately
+- silent empty loads are avoided
 
-So a successful run does not always mean useful data was loaded.
-It may only mean the code path completed without crashing.
+Required empty extracts are also treated as failures for the requested run window.
 
 ## Final summary
 
@@ -589,10 +605,11 @@ Its current pipeline:
 - extracts source data
 - transforms raw data into warehouse-style tables
 - runs simple quality checks
+- loads the current implemented nflverse-backed tables into the database
 - saves CSV snapshots for inspection
 
-The code is organized well for future growth, but it is still in an early stage.
-The biggest missing piece is full warehouse loading and stronger production behavior.
+The code is organized well for future growth, but it is still in an early stage overall.
+The biggest missing pieces are broader table coverage and more source integrations beyond nflverse.
 
 If you want to understand the project in one sentence, it is this:
 

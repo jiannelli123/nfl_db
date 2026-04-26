@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+from nfl_data_platform.transforms.game_pbp import build_fact_game_pbp
 from nfl_data_platform.transforms.player_offense import build_fact_player_offense
 from nfl_data_platform.transforms.team_defense import build_fact_team_defense
 from nfl_data_platform.transforms.team_offense import build_fact_team_offense
@@ -87,6 +88,14 @@ def test_build_fact_team_offense_calculates_starter_metrics(sample_pbp: pd.DataF
     assert buf_row["red_zone_td_rate"] == pytest.approx(0.0)
 
 
+def test_build_fact_game_pbp_creates_play_level_keys(sample_pbp: pd.DataFrame) -> None:
+    result = build_fact_game_pbp(sample_pbp)
+
+    assert result.loc[0, "pbp_key"] == "g1_1"
+    assert result.loc[0, "success"] == True
+    assert len(result) == 3
+
+
 def test_build_fact_team_defense_mirrors_opponent_outputs(sample_pbp: pd.DataFrame) -> None:
     weekly_team_stats = pd.DataFrame(
         [
@@ -125,4 +134,38 @@ def test_build_fact_player_offense_returns_expected_columns() -> None:
 
     assert result.loc[0, "team"] == "BUF"
     assert result.loc[0, "targets"] == 8
-    assert result.loc[0, "player_offense_key"] == "p1_g1_1"
+    assert result.loc[0, "player_offense_key"] == "p1_g1_REG_1"
+    assert result.loc[0, "fantasy_points_standard"] == pytest.approx(8.1)
+
+
+def test_build_fact_player_offense_calculates_standard_fantasy_points() -> None:
+    weekly_player_stats = pd.DataFrame(
+        [
+            {
+                "player_id": "qb1",
+                "player_name": "Test QB",
+                "recent_team": "BUF",
+                "game_id": "g1",
+                "season": 2025,
+                "season_type": "REG",
+                "week": 1,
+                "position": "QB",
+                "passing_yards": 300,
+                "passing_tds": 3,
+                "interceptions": 1,
+                "rushing_yards": 20,
+                "rushing_tds": 0,
+                "sack_fumbles_lost": 1,
+                "rushing_fumbles_lost": 0,
+                "receiving_fumbles_lost": 0,
+                "passing_2pt_conversions": 1,
+                "rushing_2pt_conversions": 0,
+                "receiving_2pt_conversions": 0,
+            }
+        ]
+    )
+
+    result = build_fact_player_offense(weekly_player_stats)
+
+    # 300*0.04 + 3*4 + 1*(-2) + 20*0.1 + 1*(-2) + 1*2 = 12 + 12 - 2 + 2 - 2 + 2 = 24.0
+    assert result.loc[0, "fantasy_points_standard"] == pytest.approx(24.0)

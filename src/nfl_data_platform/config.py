@@ -8,6 +8,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+load_dotenv()
+
 
 @dataclass(slots=True)
 class Settings:
@@ -30,8 +32,6 @@ def _parse_seasons(raw_value: str) -> tuple[int, ...]:
 
 def get_settings() -> Settings:
     """Load and validate runtime settings from environment variables."""
-    load_dotenv()
-
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise ValueError("DATABASE_URL is required.")

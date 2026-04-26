@@ -27,3 +27,6 @@ class PlayerProfilerAdapter(BaseSourceAdapter):
 
     def fetch_weekly_team_stats(self, seasons: tuple[int, ...]) -> pd.DataFrame:
         raise NotImplementedError("TODO: Team-level PlayerProfiler data is not scoped.")
+
+    def fetch_draft_picks(self, seasons: tuple[int, ...]) -> pd.DataFrame:
+        raise NotImplementedError("TODO: PlayerProfiler draft ingestion is not implemented.")

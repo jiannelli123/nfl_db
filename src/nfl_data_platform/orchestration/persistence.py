@@ -44,9 +44,14 @@ def persist_phase1_run(
         "dim_team": artifacts.dim_team,
         "dim_player": artifacts.dim_player,
         "dim_game": artifacts.dim_game,
+        "bridge_player_ids": artifacts.bridge_player_ids,
+        "fact_game_pbp": artifacts.fact_game_pbp,
         "fact_team_offense": artifacts.fact_team_offense,
         "fact_team_defense": artifacts.fact_team_defense,
         "fact_player_offense": artifacts.fact_player_offense,
+        "fact_team_special_teams": artifacts.fact_team_special_teams,
+        "fact_player_defense": artifacts.fact_player_defense,
+        "fact_player_special_teams": artifacts.fact_player_special_teams,
     }
     for name, frame in transformed_frames.items():
         _write_csv(transformed_dir / f"{name}.csv", frame)
@@ -59,3 +64,34 @@ def persist_phase1_run(
 def _write_csv(path: Path, frame: pd.DataFrame) -> None:
     """Write a dataframe to CSV with stable output semantics."""
     frame.to_csv(path, index=False)
+
+
+def build_draft_run_output_dir(base_dir: Path, context: "PipelineRunContext") -> Path:
+    """Build a deterministic output directory for a draft run."""
+    season = context.season if context.season is not None else "all"
+    refresh = "full" if context.full_refresh else "incremental"
+    return base_dir / "draft" / f"season_{season}" / refresh
+
+
+def persist_draft_run(
+    base_dir: Path,
+    context: "PipelineRunContext",
+    extracted: dict[str, pd.DataFrame],
+    artifacts: dict[str, pd.DataFrame],
+    quality_results: list[CheckResult],
+) -> Path:
+    """Persist draft extracted inputs, transformed outputs, and quality results as CSV files."""
+    run_dir = build_draft_run_output_dir(base_dir=base_dir, context=context)
+    extracted_dir = run_dir / "extracted"
+    transformed_dir = run_dir / "transformed"
+    extracted_dir.mkdir(parents=True, exist_ok=True)
+    transformed_dir.mkdir(parents=True, exist_ok=True)
+
+    for name, frame in extracted.items():
+        _write_csv(extracted_dir / f"{name}.csv", frame)
+    for name, frame in artifacts.items():
+        _write_csv(transformed_dir / f"{name}.csv", frame)
+
+    quality_frame = pd.DataFrame([asdict(result) for result in quality_results])
+    _write_csv(run_dir / "quality_results.csv", quality_frame)
+    return run_dir

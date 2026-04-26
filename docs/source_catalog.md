@@ -1,10 +1,10 @@
 # Source Catalog
 
 ## nflverse
-Status: Phase 1 scaffold with partial implementation.
-Purpose: primary source for schedules, rosters, play-by-play, weekly player stats, and weekly team stats.
-Access pattern: Python package integration through `nfl_data_py` or `nflreadpy`, guarded by optional imports.
-Notes: authoritative baseline source for initial warehouse construction.
+Status: fully implemented source for the current Phase 3 pipeline.
+Purpose: primary source for schedules, rosters, play-by-play, weekly player stats, weekly team stats, and draft picks.
+Access pattern: Python package integration through `nflreadpy`.
+Notes: authoritative baseline source for the current end-to-end pipeline. Empty required extracts are treated as failures for the requested run window. Draft data is loaded through `nflreadpy.load_draft_picks` in a separate draft pipeline.
 
 ## Next Gen Stats
 Status: placeholder adapter.
@@ -16,7 +16,7 @@ Notes: do not implement undocumented or restricted APIs.
 Status: placeholder adapter.
 Purpose: snap counts, advanced stats, and roster context support.
 Access pattern: TODO after legality and scraping review.
-Notes: retain adapter boundary only in Phase 1.
+Notes: retain the adapter boundary only; this source is not implemented yet.
 
 ## FTN / DVOA
 Status: placeholder adapter.
@@ -25,10 +25,10 @@ Access pattern: TODO after licensing and field availability review.
 Notes: add only explicit supported fields in later phases.
 
 ## TeamRankings
-Status: placeholder adapter.
+Status: placeholder adapter with documented enrichment intent.
 Purpose: public special teams metrics and rankings.
 Access pattern: TODO after source review.
-Notes: likely auxiliary source rather than core grain source.
+Notes: treated as an auxiliary enrichment source for team special teams ratings, not as the core grain source.
 
 ## PlayerProfiler
 Status: placeholder adapter.

@@ -27,3 +27,6 @@ class FTNAdapter(BaseSourceAdapter):
 
     def fetch_weekly_team_stats(self, seasons: tuple[int, ...]) -> pd.DataFrame:
         raise NotImplementedError("TODO: Implement licensed FTN/DVOA team metrics ingestion.")
+
+    def fetch_draft_picks(self, seasons: tuple[int, ...]) -> pd.DataFrame:
+        raise NotImplementedError("TODO: FTN draft ingestion is not scoped.")

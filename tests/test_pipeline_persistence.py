@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-import shutil
-
 import pandas as pd
+from pathlib import Path
+from uuid import uuid4
 
 from nfl_data_platform.config import Settings
 from nfl_data_platform.orchestration.pipeline import PipelineRunContext, run_phase1_pipeline
@@ -14,9 +13,7 @@ from nfl_data_platform.orchestration.pipeline import PipelineRunContext, run_pha
 def test_run_phase1_pipeline_writes_csv_outputs(
     monkeypatch,
 ) -> None:
-    test_root = Path("data/temp/test_pipeline_persistence")
-    if test_root.exists():
-        shutil.rmtree(test_root)
+    test_root = Path("data/temp") / f"test_pipeline_persistence_{uuid4().hex}"
 
     settings = Settings(
         environment="test",
@@ -95,7 +92,7 @@ def test_run_phase1_pipeline_writes_csv_outputs(
 
     monkeypatch.setattr(
         "nfl_data_platform.orchestration.pipeline.extract_phase1_data",
-        lambda _settings: extracted,
+        lambda _settings, _context: extracted,
     )
 
     result = run_phase1_pipeline(
@@ -108,11 +105,13 @@ def test_run_phase1_pipeline_writes_csv_outputs(
     assert (run_dir / "extracted" / "schedules.csv").exists()
     assert (run_dir / "extracted" / "pbp.csv").exists()
     assert (run_dir / "transformed" / "dim_team.csv").exists()
+    assert (run_dir / "transformed" / "bridge_player_ids.csv").exists()
+    assert (run_dir / "transformed" / "fact_game_pbp.csv").exists()
     assert (run_dir / "transformed" / "fact_team_offense.csv").exists()
     assert (run_dir / "quality_results.csv").exists()
+    assert result["staged_files"]["schedules"].exists()
 
     quality_results = pd.read_csv(run_dir / "quality_results.csv")
     assert set(quality_results.columns) == {"check_name", "target_name", "passed", "detail"}
     assert not quality_results.empty
-
-    shutil.rmtree(test_root)
+    assert result["load_result"]["rows_written"] >= 5

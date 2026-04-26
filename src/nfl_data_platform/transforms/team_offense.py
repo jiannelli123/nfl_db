@@ -41,6 +41,7 @@ def build_fact_team_offense(pbp: pd.DataFrame, weekly_team_stats: pd.DataFrame) 
     )
     offense["is_red_zone"] = offense["yardline_100"].fillna(101).le(20)
     offense["red_zone_td"] = offense["is_red_zone"] & offense["touchdown"].fillna(0).eq(1)
+    offense["early_down_epa_value"] = offense["epa"].where(offense["is_early_down"])
 
     grouped = offense.groupby(["posteam", "game_id", "season", "season_type", "week"], as_index=False).agg(
         plays=("play_id", "count"),
@@ -48,7 +49,7 @@ def build_fact_team_offense(pbp: pd.DataFrame, weekly_team_stats: pd.DataFrame) 
         total_epa=("epa", "sum"),
         success_rate=("is_success", "mean"),
         explosive_play_rate=("is_explosive", "mean"),
-        early_down_epa=("epa", lambda values: values.loc[offense.loc[values.index, "is_early_down"]].mean()),
+        early_down_epa=("early_down_epa_value", "mean"),
         third_down_attempts=("is_third_down", "sum"),
         third_down_conversions=("third_down_converted", "sum"),
         red_zone_plays=("is_red_zone", "sum"),
@@ -86,6 +87,8 @@ def build_fact_team_offense(pbp: pd.DataFrame, weekly_team_stats: pd.DataFrame) 
         + result["game_id"].astype(str)
         + "_"
         + result["season_type"].astype(str)
+        + "_"
+        + result["week"].astype(str)
     )
     return result[
         [
