@@ -77,3 +77,6 @@ When a new table or metric is introduced, update:
 - docs/data_dictionary.md
 - docs/metric_definitions.md
 - docs/source_catalog.md if source lineage changes
+
+## Working context
+Read `docs/working_context.md` at the start of every session. It records where the project stands, known issues, and the owner's related NFL context, including their fantasy football league. Update it whenever any of that changes.
